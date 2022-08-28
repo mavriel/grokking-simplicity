@@ -211,3 +211,190 @@ const updateShippingIcons = (cart) => {
 		.forEach(([button, isIconShow])=>setShowButtonIcon(button, isIconShow))
 }
 ```		
+
+# 변경 가능한 데이터 구조를 가진 언어에서 불변성 유지하기
+* 액션을 동작으로 번역하기 시작함
+1. 카피-온-라이트 원칙 세 단계
+    1. 복사본 만들기
+    2. 복사본 변경하기
+    3. 복사본 리턴하기
+   --> 불변성을 유지하면서 값을 바꿈
+   --> 이렇게 하면 쓰기를 읽기로 바꿀 수 있음
+
+```javascript
+// 아래와 같은 일반화된 메서드가 중요
+const removeItems = (array, idx, count) => {
+	const copy = [...array];
+	copy.splice(idx, count);
+	return copy
+}
+
+```
+	* 120쪽 연습문제
+```javascript
+const addContact = (list, email) => [...list, email];
+
+const submitFormHandler = event => {
+	const email = event.target.elements['email'].value;
+	mailingList = addContact(mailingList, email)
+}
+```
+
+3. 쓰면서 읽기도 하는 함수 분리하기
+	* 많은 메서드들이 읽기/쓰기를 동시에 하는 경우가 많음 (js 말고 다른 언어도 흔하다)
+	* 읽기용 메서드 / 쓰기용 메서드로 구분하는 것이 좋음
+	* 125쪽 연습문제
+```javascript
+const last = (list) => list[list.length-1];
+const dropLast = (list) => [...list].slice(0, list.length-1);
+const pop = (list) => {last:last(list), array:dropLast(list)}
+```
+	* 128~130쪽
+```javascript
+const push = (array, elem) => [...array, elem];
+const addContact = (list, email) => push(list, email);
+const arraySet = (array, idx, value) => {
+	const result = [...array];
+	result[idx] = value;
+	return result;
+}
+```
+4. 객체에 대한 카피온 라이트
+	{...object} --> 이렇게 하면 됨
+	* 136~144쪽
+```javascript
+const objectSet = (object, key, value) => ({
+	...object,
+	[key]: value
+})
+
+const setPrice = (item, newPrice) => objectSet(item, 'price', newPrice);
+const setQuantity = (item, newQuantity) => objectSet(item, 'quantity', newQuantity);
+const objectDelete = (object, key) => {
+	const result = {...object};
+	delete result[key];
+	return result;
+}
+
+const setQuantityByName = (cart, name, quantity) => cart.map(item=>{
+	if(item.name === name) {
+		return setQuantity(item, quantity);
+	}
+	return item;
+})
+```
+
+# 7. 신뢰할 수 없는 코드를 쓰면서 불변성 지키기
+1. 방어적 복사
+	1. 데이터가 안전한 코드에서 나갈 때 복사(deep copy)
+	2. 안전한 코드로 데이터가 들어 올때 복사(deep copy)
+	3. 복사-비신뢰 코드-복사 ==> 함수로 분리
+	4. 154~155쪽
+
+```javascript
+const deepCopy = (target) => {
+	if(Array.isArray(target)) {
+		return target.map(item=>({...item}));
+	}
+	return {...target};
+}
+// R.clone
+const payrollCalcSafe = (employees) => {
+	const copy = deepCopy(employees);
+	const payrollChecks = payrollCalc(copy);
+	return deepCopy(payrollChecks);
+}	
+// R.pipe(deepCopy, payrollCalc, deepCopy)
+``` 
+2. 161 연습문제
+	1: DC, 2: SC, 3: SC, 4: DC, 5: DC
+3. 163 연습문제
+	1:DC 2:CW 3:~~DC~~ DC와CW 4:~~DC~~CW 5:~~DC~~CW 6:DC 7:DC 8:CW 9:DC 10:DC 
+
+# 8/9 계층형 설계
+1. 소프트웨어 설계
+	코드를 만들고, 테스트하고, 유지보수하기 쉬운 프로그래밍 방법을 선택하기 위해 미적 감각을 사용하는 것 
+2. 계층형 설계
+	소프트웨어를 계층으로 구성하는 기술
+	각 계층에 있는 함수는 바로 아래 계층에 있는 함수를 이용해 정의
+3. 계층형 설계 패턴
+	1. 직접 구현
+	2. 추상화 벽
+	3. 작은 인터페이스
+	4. 편리한 계층
+
+### 1. 직접 구현
+1. 비슷한 구체화 수준에서 작동하도록 함
+2. 다양한 계층의 함수를 호출한다면 구체화 수준이 같지 않다는 증거
+
+178쪽 연습문제
+	사이에 새로운 계층일듯함. 가장 낮은 계층에 removeItem(index), findIndex(item)이 있을 거고 removeItemByName이 이 함수들을 사용해 생성될 것 같다 --> 188쪽에 나온다 괜히 기분좋음
+
+190-195쪽 연습문제
+```javascript
+const isInCart = (cart, name) => indexOfItem(cart, name) !== null;
+const setPriceByName = (cart, name, price) => {
+	const index = indexOfItem(cart, name);
+	if(index === null) {
+		return cart;
+	}
+	const copy = [...cart];
+	copy[index] = setPrice(copy[index], price);
+	return copy;
+}	
+// 연습문제의 답에서는 무조건 얕은 복사한 리스트를 반환한다. 
+// 난 아무것도 안 바뀌면 값을 복사할 필요가 없다고 생각하는데, 이건 경우에따라서 다를듯. 
+// 변환된 코드의 경우 사실 원래 동작과 살짝 바뀌는 문제도 존재한다. 
+// name이 동일한 제품이 있으면 동작에 버그 발생, 전재조건으로 이름이 동일한 제품은 없다고 되어있을듯함
+
+const setPriceByName = (cart, name, price) => {
+	const index = indexOfItem(cart, name);
+	if(index === null) {
+		return cart;
+	}
+	return arraySet(cart, idx, setPrice(copy[index], price)
+}
+```
+ 
+197쪽 기억하세요
+	1. 배열인덱스 쓰기 
+		1. 별생각없이 쓸 수 있다.
+		2. 코드 내용대로 동작하니까 
+	2. 함수 쓰기
+		1. 나중에 수정사항있을때 고치기가 너무너무 좋아진다. (캐싱, 전후이벤트 추가, 이름변경등)
+		2. 그냥 이거다
+
+// 기타 - 무의식중에 하는 것들을 이렇게 연구해서 상세하게 설명하다니.. 부럽
+
+### 2. 추상화 벽
+1. 세부구현을 감추고 인터페이스를 제공
+2. 언제쓸까?
+	1. 쉽게 구현을 바꾸기 위해 - 결국은 인터페이스를 먼저 만드는 것으로 보임
+	2. 코드를 읽고 쓰기 쉽게 만들기 위해
+	3. 팀 간에 조율할 것을 줄이기 위해
+	4. 주어진 문제에 집중하기 위해
+	--> 신경쓸것과 아닌것을 구분
+ * 우리 프로젝트 
+	1. 폴더내 index만 접근하게 하는 룰
+	2. 파스는 파스클라우드에서만 사용
+
+### 3. 작은 인터페이스 
+1. 추상화 벽에 만든 함수를 인터페이스라고 생각하면 됨
+2. 추상화벽이라는 계층의 크기를 작게 만듦
+
+### 4. 편리한 계층
+1. 언제 그만 멈출까?
+	1. 코드가 편리하다고 느껴지면 (??)
+2. 적용 시점
+	1. 구체적인 것을 너무 많이 알아야 하는 시점
+	2. 코드가 지저분 하다고 느껴지면 (??)
+
+## 호출 그래프
+1. 알수 있는 것
+	1. 유지보수성
+		- 그래프의 상단에 위치할 수록 고치가 쉬움 
+	2. 테스트
+		- 그래프의 하단에 위치할 수록 테스트가 중요
+		- 위쪽은 코드가 더 많이 바뀔 것이므로, 테스트의 수명이 짧아짐 
+	3. 재사용 
+		- 아래쪽이 재사용하기가 편함 
