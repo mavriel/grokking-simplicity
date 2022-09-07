@@ -398,3 +398,160 @@ const setPriceByName = (cart, name, price) => {
 		- 위쪽은 코드가 더 많이 바뀔 것이므로, 테스트의 수명이 짧아짐 
 	3. 재사용 
 		- 아래쪽이 재사용하기가 편함 
+
+# 10/11. 일급함수
+1. 함수 이름에 있는 암묵적 인자 
+    1. 특징 
+        1. 함수 구현이 거의 똑같음
+        2. 함수 이름의 구현의 차이를 만듦
+    2. 리팩터링 
+        1. 함수 이름에 있는 암묵적 인자 확인
+        2. 명시적 인자 추가
+        3. 하드 코딩된 값을 새로운 인자로 변경
+        4. 함수 호출부분 수정
+		==> 필드명 문자열로 보내는 것 어떻게 처리할지 (아마도 enum 비슷한 걸로??)
+```
+2. 명시적 인자가 추가된 함수 생성
+3. 기존 함수에서 명시적 인자가 추가된 함수 호출 (어디서 이 함수를 쓸지 모름)
+4. 기존 함수가 필요없다면, 함수 호출하는 곳에서 직접 수정
+```
+
+2. 일급
+	1. 값으로 처리 될 수 있는 모든 것 (변수에 할당, 인자, 리턴값 등등 )
+	2. 일급이 아닌 것을 일급으로 바꿀 수 있어야 됨
+
+3. 필드명을 문자열로 받아 처리
+	1. typescript 같은 type으로 처리
+	2. 런타임에 예외처리 추가 
+	==> 런타임 예외처리가 크게 의미가 있는지 모르겠다. 
+		비정상 동작을 하지 않게 아얘 에러처리한다는 것이 중요하다면 의미가 있지만,
+		그게 아니라면, 함수명을 유지하는게 실수방지에는 좋을 것 같다. 
+
+4. 반복문을 일급으로 변경
+	1. 반복문을 설명할 수 있는 이름의 함수로 변경 (코드를 함수로 감싸기)
+	2. 반복문내 지역변수를 일반적인 이름으로 변경 (더 일반적인 이름으로 바꾸기)
+	3. 함수이름의 암묵적 인자를 명시적 인자로 변경 (암묵적 인자 드러내기)
+	4. 반복문내 본문을 함수로 분리  (함수 추출하기)
+	5. 반복문이 포함된 함수를 일반적 이름으로 바꾸고, 반복문내 함수를 인자로 변경 (암묵적 인자 드러내기)
+	==> 결국 FP 라이브러리에서 제공하는 함수를 만드는 것
+	==> 함수 본문을 콜백으로 바꾸기 (replace body with callback)
+
+5. 배열에 대한 카피-온-라이트
+연습문제 273 - 278
+``` javascript
+const push = (array, elem) => withArrayCopy(array, (copy)=>copy.push(elem));
+const dropLast = (array) => withArrayCopy(array, (copy)=>copy.pop());
+const dropFirst = (array) => withArrayCopy(array, (copy)=>copy.shift());
+
+const withObjectCopy = (object, modify) => {
+	const result = {...object};
+	modify(result);
+	return result;
+}
+
+const objectSet = (object, key, value) => withObjectCopy(object, (copy)=>copy[key]=value);
+const objectDelete = (object, key) => withObjectCopy(object, (copy)=>delete copy[key]);
+
+const tryCatch(execute, errorHandler) => {
+	try {
+		execute();
+	} catch(error) {
+		errorHandler(error);
+	}
+}
+
+const IF = (test, then, else) => {
+	if(test()) {
+		return then();
+	}
+	return else();
+}
+
+```
+
+6. 함수를 리턴하는 함수
+	이쪽은 처음에는 많이 어려울 듯. wrapLogging이란 함수를 변경하는 과정 한번더 확인해보자
+	add1, add10 이런 예제가 쉬울 것 같다.
+연습문제 285 - 286
+``` javascript
+const wrapErrorHandler = (f, errorHandler=()=>null) => (...params) => {
+	try {
+		return f(...params);
+	} catch (err) {
+		return errorHandler(err);
+	}
+}
+
+const makeAdder = (adder) => (input) => input+adder;
+```
+
+!! 287쪽 내용 아주 중요. 결국은 함수형을 쓰면 좋은 코드가 나오는 것이 아님. 좋은 코드를 만들기 위해, 필요하면 함수형을 사용하는 것. 연습할때는 함수형의 극한(?)까지 가도 좋지만, 실무에서는 남들도 읽기쉽고, 고치기도 쉬운 코드를 만들어야 함을 명심
+
+# 12. 함수형 반복
+1. map
+	* forEach를 사용하는 경우자체가 중복이라는 관점
+연습문제 299
+``` javascript
+const result = _.map(({firstName, lastName, address})=>({firstName, lastName, address}))(customer);
+const result = _.map(_.pick(['firstName','lastName','address']))(customer);
+```
+2. filter
+연습문제 304
+``` javascript
+const testGroup = _.filter(({id}) => id%3 === 0)(customers);
+const nonTestGroup = _.filter(({id}) => id%3 !== 0)(customers);
+```
+3. reduce
+연습문제 309 - 312
+``` javascript
+const sum = (numbers) => reduce(numbers, 0, (result, number)=>result+number);
+const product = (numbers) => reduce(numbers, 1, (result, number)=>result*number);
+const min = (numbers) => reduce(numbers, Number.MAX_VALUE, (result, number)=>number<result?number:result  );
+const max = (numbers) => reduce(numbers, Number.MIN_VALUE, (result, number)=>number>result?number:result  );
+[] / [] / init / 같은 array / 같은 array / []
+```
+	* reduce로 할 수 있는 것들
+		1. 실행 취소/실행 복귀
+		2. 테스트할 때 사용자 입력을 다시 실행하기
+		3. 시간 여행 디버깅
+		4. 회계 감사 추적
+			==> 모든 명령이 계산이고 그것들을 array로 저장후 다시 돌리는 개념인 듯
+연습문제 314
+``` javascript
+const map = (arr, f) => reduce(arr, [], (result, item) => [...result, f(item)]);
+const filter = (arr, f) => reduce(arr, [], (result, item) => f(item)?[...result, f(item)]:result);
+```
+
+# 13. 함수형 도구 체이닝
+1. 체인을 명확하게 만들기
+	1. 단계에 이름 붙이기
+	2. 콜백에 이름 붙이기
+		==> 다른 곳에서 사용되는지 여부에 따라서 둘중 어느것을 쓸지 결정하면 될 것 같다 
+2. 스트림 결합
+	1.  map, filter, reduce 체인을 최적화 하는 것
+	2. 병목이 생겼을 때만 쓰고, 대부분의 경우에는 여러 단계를 사용하는 것이 읽기에 편함 
+3. 반복문을 함수형 도구로 리팩토링
+	1. 데이터 만들기
+	2. 배열 전체를 다루기
+	3. 작은 단계로 나누기 
+```  javascript
+const shoesAndSocksInventory = (products) => {
+	const shoesAndSocks = filter(product=>product.type === 'shoes' || product.type === 'socks');
+	return reduce(shoesAndSocks, 0, (result, item)=>result+item.numberInInventory);
+```
+연습문제 348-352
+``` javascript
+const roster = reduce(evaluations, {}, (result, evaluation)=>{
+	const {position, name} = evaluation;
+	if(result[postion]) {
+		return result;
+	}
+	return {
+		...result,
+		[position]: name
+	}
+})
+
+const recommendations = map(employeeNames, (name)=> ({name, positon: recommendPosition(name)})); 
+
+```
