@@ -555,3 +555,32 @@ const roster = reduce(evaluations, {}, (result, evaluation)=>{
 const recommendations = map(employeeNames, (name)=> ({name, positon: recommendPosition(name)})); 
 
 ```
+
+# 14. 중첩된 데이터에 함수형 도구 사용하기
+1. 연습문제
+
+``` javascript
+const user = {
+	firstName: "Joe",
+	lastNmae: "Nash",
+	email: "JOE@EXAMPLE.COM"
+};
+update(user, "email", lowercase);
+
+const item = {
+	name: "shoes",
+	price: 7,
+	quantity: 2
+};
+const tenXQuantity = (item) => update(item, "quantity", (quantity) => quantity * 10);
+
+16 / ~~14~~ / CINDY
+
+```
+
+2. 연습문제
+``` javascript
+const incrementSizeByName = (cart, name) => nestedUpdate(cart, [name, 'option', 'size'], size=>size+1);
+```
+
+387 - 했던 얘기가 나오긴 함. 그대로 안 쓰고 한번 감싸서 쓰는것 
